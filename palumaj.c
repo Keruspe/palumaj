@@ -14,13 +14,13 @@ typedef struct {
 } options;
 
 void
-help()
+help(char * caller)
 {
-	printf("usage: [-s|--sync] [-w|--wait] [-a|-?|--ask] [-h|--help]\n");
+	printf("usage: %s [-s|--sync] [-w|--wait] [-a|-?|--ask] [-h|--help]\n", caller);
 	printf("sync: run \"cave sync\" before upgrading\n");
 	printf("wait: wait after upgrading (to read messages)\n");
 	printf("ask: tell cave to ask before executing (needs a patched cave, like the one from the Keruspe overlay)\n");
-	printf("help: print this help");
+	printf("help: print this help\n");
 	exit(0);
 }
 
@@ -42,7 +42,7 @@ get_options(int argc, char ** argv)
 			else if (strcmp(argv[i], "--ask") == 0)
 				opts.ask = ASK_OPT;
 			else if (strcmp(argv[i], "--help") == 0)
-				help();
+				help(argv[0]);
 			continue;
 		}
 		for (j = 1 ; j < size ; ++j)
@@ -60,7 +60,7 @@ get_options(int argc, char ** argv)
 				opts.ask=ASK_OPT;
 				break;
 			case 'h':
-				help();
+				help(argv[0]);
 			}
 		}
 	}
