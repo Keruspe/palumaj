@@ -1,5 +1,6 @@
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <sys/wait.h>
@@ -13,6 +14,7 @@ void
 help()
 {
 	printf("usage: [-s|--sync] [-w|--wait] [-h|--help]\nsync: run \"cave sync\" before upgrading\nwait: wait after upgrading (to read messages)\n");
+	exit(0);
 }
 
 options
