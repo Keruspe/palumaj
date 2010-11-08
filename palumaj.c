@@ -10,18 +10,18 @@
 typedef struct {
 	bool sync;
 	bool wait;
+	bool retry;
 	char * ask;
-	bool loop;
 } options;
 
 void
 help(char * caller)
 {
-	printf("usage: %s [-s|--sync] [-w|--wait] [-a|-?|--ask] [-l|--loop] [-h|--help]\n", caller);
+	printf("usage: %s [-s|--sync] [-w|--wait] [-a|-?|--ask] [-r|--retry] [-h|--help]\n", caller);
 	printf("sync: run \"cave sync\" before upgrading\n");
 	printf("wait: wait after upgrading (to read messages)\n");
 	printf("ask: tell cave to ask before executing (needs a patched cave, like the one from the Keruspe overlay)\n");
-	printf("loop: ask if you want to retry when upgrade fails\n");
+	printf("retry: ask if you want to retry when upgrade fails\n");
 	printf("help: print this help\n");
 	exit(0);
 }
@@ -29,7 +29,7 @@ help(char * caller)
 options
 get_options(int argc, char ** argv)
 {
-	options opts = {false, false, NULL, false};
+	options opts = {false, false, false, NULL};
 	int i, j, size;
 	for (i = 1 ; i < argc ; ++i) {
 		size = strlen(argv[i]);
@@ -43,8 +43,8 @@ get_options(int argc, char ** argv)
 				opts.wait = true;
 			else if (strcmp(argv[i], "--ask") == 0)
 				opts.ask = ASK_OPT;
-			else if (strcmp(argv[i], "--loop") == 0)
-				opts.loop = true;
+			else if (strcmp(argv[i], "--retry") == 0)
+				opts.retry = true;
 			else if (strcmp(argv[i], "--help") == 0)
 				help(argv[0]);
 			continue;
@@ -61,10 +61,10 @@ get_options(int argc, char ** argv)
 				break;
 			case '?':
 			case 'a':
-				opts.ask=ASK_OPT;
+				opts.ask = ASK_OPT;
 				break;
-			case 'l':
-				opts.loop=true;
+			case 'r':
+				opts.retry = true;
 				break;
 			case 'h':
 				help(argv[0]);
@@ -103,19 +103,21 @@ cave_purge(options opts)
 	int return_state;
 	if (!(pid = fork()))
 	{
-	retry:
 		waitpid(cave_resolve(opts), &return_state, 0);
-		if ((return_state != 0) && opts.loop)
+		while ((return_state != 0) && opts.retry)
 		{
 			char c;
-			bool retry = true;
+			printf("Do you want to retry ? [Y/n] : ");
 			while ((c=getchar()) != '\n')
 			{
 				if (c == 'N' || c == 'n')
-					retry = false;
+				{
+					opts.retry = false;
+					opts.wait = false;
+				}
 			}
-			if (retry)
-				goto retry;
+			if (opts.retry)
+				waitpid(cave_resolve(opts), &return_state, 0);
 		}
 		if (opts.wait)
 		{
