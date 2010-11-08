@@ -11,15 +11,17 @@ typedef struct {
 	bool sync;
 	bool wait;
 	char * ask;
+	bool loop;
 } options;
 
 void
 help(char * caller)
 {
-	printf("usage: %s [-s|--sync] [-w|--wait] [-a|-?|--ask] [-h|--help]\n", caller);
+	printf("usage: %s [-s|--sync] [-w|--wait] [-a|-?|--ask] [-l|--loop] [-h|--help]\n", caller);
 	printf("sync: run \"cave sync\" before upgrading\n");
 	printf("wait: wait after upgrading (to read messages)\n");
 	printf("ask: tell cave to ask before executing (needs a patched cave, like the one from the Keruspe overlay)\n");
+	printf("loop: ask if you want to retry when upgrade fails\n");
 	printf("help: print this help\n");
 	exit(0);
 }
@@ -27,7 +29,7 @@ help(char * caller)
 options
 get_options(int argc, char ** argv)
 {
-	options opts = {false, false, NULL};
+	options opts = {false, false, NULL, false};
 	int i, j, size;
 	for (i = 1 ; i < argc ; ++i) {
 		size = strlen(argv[i]);
@@ -41,6 +43,8 @@ get_options(int argc, char ** argv)
 				opts.wait = true;
 			else if (strcmp(argv[i], "--ask") == 0)
 				opts.ask = ASK_OPT;
+			else if (strcmp(argv[i], "--loop") == 0)
+				opts.loop = true;
 			else if (strcmp(argv[i], "--help") == 0)
 				help(argv[0]);
 			continue;
@@ -58,6 +62,9 @@ get_options(int argc, char ** argv)
 			case '?':
 			case 'a':
 				opts.ask=ASK_OPT;
+				break;
+			case 'l':
+				opts.loop=true;
 				break;
 			case 'h':
 				help(argv[0]);
@@ -93,9 +100,23 @@ pid_t
 cave_purge(options opts)
 {
 	pid_t pid = 0;
+	int return_state;
 	if (!(pid = fork()))
 	{
-		waitpid(cave_resolve(opts), NULL, 0);
+	retry:
+		waitpid(cave_resolve(opts), &return_state, 0);
+		if ((return_state != 0) && opts.loop)
+		{
+			char c;
+			bool retry = true;
+			while ((c=getchar()) != '\n')
+			{
+				if (c == 'N' || c == 'n')
+					retry = false;
+			}
+			if (retry)
+				goto retry;
+		}
 		if (opts.wait)
 		{
 			printf("Press any key to continue...");
