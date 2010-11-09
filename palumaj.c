@@ -114,6 +114,7 @@ cave_purge(options opts)
 				{
 					opts.retry = false;
 					opts.wait = false;
+					opts.sync = false;
 				}
 			}
 			if (opts.retry)
