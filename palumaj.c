@@ -84,27 +84,27 @@ cave_sync()
 }
 
 pid_t
-cave_resolve(options opts)
+cave_resolve(options * opts)
 {
 	pid_t pid = 0;
 	if (!(pid = fork()))
 	{
-		if (opts.sync)
+		if (opts->sync)
 			waitpid(cave_sync(), NULL, 0);
-		execl("/usr/bin/cave", "cave", "resolve", "-x1c", "-Cs", "-U", "*/*", "-d", "*/*", "-P", "*/*", "--suggestions", "ignore", "--recommendations", "ignore", "installed-slots", opts.ask, NULL);
+		execl("/usr/bin/cave", "cave", "resolve", "-x1c", "-Cs", "-U", "*/*", "-d", "*/*", "-P", "*/*", "--suggestions", "ignore", "--recommendations", "ignore", "installed-slots", opts->ask, NULL);
 	}
 	return pid;
 }
 
 pid_t
-cave_purge(options opts)
+cave_purge(options * opts)
 {
 	pid_t pid = 0;
 	int return_state;
 	if (!(pid = fork()))
 	{
 		waitpid(cave_resolve(opts), &return_state, 0);
-		while ((return_state != 0) && opts.retry)
+		while ((return_state != 0) && opts->retry)
 		{
 			char c;
 			printf("Do you want to retry ? [Y/n] : ");
@@ -112,20 +112,20 @@ cave_purge(options opts)
 			{
 				if (c == 'N' || c == 'n')
 				{
-					opts.retry = false;
-					opts.wait = false;
-					opts.sync = false;
+					opts->retry = false;
+					opts->wait = false;
+					opts->sync = false;
 				}
 			}
-			if (opts.retry)
+			if (opts->retry)
 				waitpid(cave_resolve(opts), &return_state, 0);
 		}
-		if (opts.wait)
+		if (opts->wait)
 		{
 			printf("Press any key to continue...");
 			while (getchar() != '\n');
 		}
-		execl("/usr/bin/cave", "cave", "purge", "-x", opts.ask, NULL);
+		execl("/usr/bin/cave", "cave", "purge", "-x", opts->ask, NULL);
 	}
 	return pid;
 }
@@ -134,7 +134,7 @@ int
 main(int argc, char ** argv)
 {
 	options opts = get_options(argc, argv);
-	waitpid(cave_purge(opts), NULL, 0);
+	waitpid(cave_purge(&opts), NULL, 0);
 	execl("/usr/bin/cave", "cave", "fix-linkage", "-x", "--", "-Ca", opts.ask, NULL);
 	return 0;
 }
