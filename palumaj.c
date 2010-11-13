@@ -26,10 +26,13 @@ help(char * caller)
 	exit(0);
 }
 
-options
-get_options(int argc, char ** argv)
+void
+get_options(options * opts, int argc, char ** argv)
 {
-	options opts = {false, false, false, NULL};
+	opts->sync = false;
+	opts->wait = false;
+	opts->retry = false;
+	opts->ask = NULL;
 	int i, j, size;
 	for (i = 1 ; i < argc ; ++i) {
 		size = strlen(argv[i]);
@@ -38,13 +41,13 @@ get_options(int argc, char ** argv)
 		if (argv[i][1] == '-')
 		{
 			if (strcmp(argv[i], "--sync") == 0)
-				opts.sync = true;
+				opts->sync = true;
 			else if (strcmp(argv[i], "--wait") == 0)
-				opts.wait = true;
+				opts->wait = true;
 			else if (strcmp(argv[i], "--ask") == 0)
-				opts.ask = ASK_OPT;
+				opts->ask = ASK_OPT;
 			else if (strcmp(argv[i], "--retry") == 0)
-				opts.retry = true;
+				opts->retry = true;
 			else if (strcmp(argv[i], "--help") == 0)
 				help(argv[0]);
 			continue;
@@ -54,24 +57,23 @@ get_options(int argc, char ** argv)
 			switch(argv[i][j])
 			{
 			case 's':
-				opts.sync = true;
+				opts->sync = true;
 				break;
 			case 'w':
-				opts.wait = true;
+				opts->wait = true;
 				break;
 			case '?':
 			case 'a':
-				opts.ask = ASK_OPT;
+				opts->ask = ASK_OPT;
 				break;
 			case 'r':
-				opts.retry = true;
+				opts->retry = true;
 				break;
 			case 'h':
 				help(argv[0]);
 			}
 		}
 	}
-	return opts;
 }
 
 pid_t
@@ -133,7 +135,8 @@ cave_purge(options * opts)
 int
 main(int argc, char ** argv)
 {
-	options opts = get_options(argc, argv);
+	options opts;
+	get_options(&opts, argc, argv);
 	waitpid(cave_purge(&opts), NULL, 0);
 	execl("/usr/bin/cave", "cave", "fix-linkage", "-x", "--", "-Ca", opts.ask, NULL);
 	return 0;
