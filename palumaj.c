@@ -1,3 +1,5 @@
+#include "run_bg.h"
+
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -76,60 +78,42 @@ get_options(options * opts, int argc, char ** argv)
 	}
 }
 
-pid_t
+void
 cave_sync()
 {
-	pid_t pid = 0;
-	if (!(pid = fork()))
-		execl("/usr/bin/cave", "cave", "sync", NULL);
-	return pid;
+	exec_bg_and_wait("/usr/bin/cave", "cave", "sync", NULL);
 }
 
-pid_t
+void
 cave_resolve(options * opts)
 {
-	pid_t pid = 0;
-	if (!(pid = fork()))
+
+	bool retry = true;
+	while (retry && exec_bg_and_wait("/usr/bin/cave", "cave", "resolve", "-x1c", "-Cs", "-U", "*/*", "-d", "*/*", "-P", "*/*", "--suggestions", "ignore", "--recommendations", "ignore", "installed-slots", opts->ask, NULL) && opts->retry)
 	{
-		if (opts->sync)
-			waitpid(cave_sync(), NULL, 0);
-		execl("/usr/bin/cave", "cave", "resolve", "-x1c", "-Cs", "-U", "*/*", "-d", "*/*", "-P", "*/*", "--suggestions", "ignore", "--recommendations", "ignore", "installed-slots", opts->ask, NULL);
+		char c;
+		printf("Do you want to retry ? [Y/n] : ");
+		while ((c=getchar()) != '\n')
+		{
+			if (c == 'N' || c == 'n')
+			{
+				retry = false;
+				opts->wait = false;
+			}
+		}
 	}
-	return pid;
 }
 
-pid_t
-cave_purge(options * opts)
+void
+cave_purge(const char * ask)
 {
-	pid_t pid = 0;
-	int return_state;
-	if (!(pid = fork()))
-	{
-		waitpid(cave_resolve(opts), &return_state, 0);
-		while ((return_state != 0) && opts->retry)
-		{
-			char c;
-			printf("Do you want to retry ? [Y/n] : ");
-			while ((c=getchar()) != '\n')
-			{
-				if (c == 'N' || c == 'n')
-				{
-					opts->retry = false;
-					opts->wait = false;
-				}
-			}
-			opts->sync = false;
-			if (opts->retry)
-				waitpid(cave_resolve(opts), &return_state, 0);
-		}
-		if (opts->wait)
-		{
-			printf("Press any key to continue...");
-			while (getchar() != '\n');
-		}
-		execl("/usr/bin/cave", "cave", "purge", "-x", opts->ask, NULL);
-	}
-	return pid;
+	exec_bg_and_wait("/usr/bin/cave", "cave", "purge", "-x", ask, NULL);
+}
+
+void
+cave_fix_linkage(const char * ask)
+{
+	exec_bg_and_wait("/usr/bin/cave", "cave", "fix-linkage", "-x", "--", "-Ca", ask, NULL);
 }
 
 int
@@ -137,7 +121,14 @@ main(int argc, char ** argv)
 {
 	options opts;
 	get_options(&opts, argc, argv);
-	waitpid(cave_purge(&opts), NULL, 0);
-	execl("/usr/bin/cave", "cave", "fix-linkage", "-x", "--", "-Ca", opts.ask, NULL);
+	if (opts.sync) cave_sync();
+	cave_resolve(&opts);
+	if (opts.wait)
+	{
+		printf("Press any key to continue...");
+		while (getchar() != '\n');
+	}
+	cave_purge(opts.ask);
+	cave_fix_linkage(opts.ask);
 	return 0;
 }
