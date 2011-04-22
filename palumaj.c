@@ -84,12 +84,13 @@ cave_sync()
 	exec_bg_and_wait("/usr/bin/cave", "cave", "sync", NULL);
 }
 
-void
+bool
 cave_resolve(options * opts)
 {
 
 	bool retry = true;
-	while (retry && exec_bg_and_wait("/usr/bin/cave", "cave", "resolve", "-x1c", "-Cs", "-U", "*/*", "-d", "*/*", "-P", "*/*", "--suggestions", "ignore", "--recommendations", "ignore", "world", opts->ask, NULL) && opts->retry)
+        bool failure;
+	while (retry && (failure = exec_bg_and_wait("/usr/bin/cave", "cave", "resolve", "-x1c", "-Cs", "-U", "*/*", "-d", "*/*", "-P", "*/*", "--suggestions", "ignore", "--recommendations", "ignore", "world", opts->ask, NULL)) && opts->retry)
 	{
 		char c;
 		printf("Do you want to retry ? [Y/n] : ");
@@ -102,6 +103,7 @@ cave_resolve(options * opts)
 			}
 		}
 	}
+	return !failure;
 }
 
 void
@@ -120,15 +122,29 @@ int
 main(int argc, char ** argv)
 {
 	options opts;
+	bool purge = true;
 	get_options(&opts, argc, argv);
 	if (opts.sync) cave_sync();
-	cave_resolve(&opts);
+	bool success = cave_resolve(&opts);
 	if (opts.wait)
 	{
 		printf("Press any key to continue...");
 		while (getchar() != '\n');
 	}
-	cave_purge(opts.ask);
+        else if (!success)
+	{
+		char c;
+		printf("Resolve failed, do you still want to purge ? [Y/n] : ");
+		while ((c=getchar()) != '\n')
+		{
+			if (c == 'N' || c == 'n')
+			{
+				purge = false;
+			}
+		}
+	}
+	if (purge)
+		cave_purge(opts.ask);
 	cave_fix_linkage(opts.ask);
 	return 0;
 }
