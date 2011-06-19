@@ -90,7 +90,7 @@ cave_resolve(options * opts)
 
 	bool retry = true;
         bool failure;
-	while (retry && (failure = exec_bg_and_wait("/usr/bin/cave", "cave", "resolve", "-x1c", "-Cs", "-U", "*/*", "-d", "*/*", "-P", "*/*", "--suggestions", "ignore", "--recommendations", "ignore", "world", opts->ask, NULL)) && opts->retry)
+	while (retry && (failure = exec_bg_and_wait("/usr/bin/cave", "cave", "resolve", "-x1c", "-Cs", "-Km", "-km", "-U", "*/*", "-d", "*/*", "-P", "*/*", "--suggestions", "ignore", "--recommendations", "ignore", "world", opts->ask, NULL)) && opts->retry)
 	{
 		char c;
 		printf("Do you want to retry ? [Y/n] : ");
