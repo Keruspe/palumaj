@@ -11,6 +11,7 @@
 
 typedef struct {
 	bool sync;
+	bool metadata;
 	bool wait;
 	bool retry;
 	char * ask;
@@ -19,8 +20,9 @@ typedef struct {
 void
 help(char * caller)
 {
-	printf("usage: %s [-s|--sync] [-w|--wait] [-a|-?|--ask] [-r|--retry] [-h|--help]\n", caller);
+	printf("usage: %s [-s|--sync [-m|--metadata]] [-w|--wait] [-a|-?|--ask] [-r|--retry] [-h|--help]\n", caller);
 	printf("sync: run \"cave sync\" before upgrading\n");
+	printf("metadata: run \"cave generate-metadata\" after \"cave sync\"\n");
 	printf("wait: wait after upgrading (to read messages)\n");
 	printf("ask: tell cave to ask before executing (needs a patched cave, like the one from the Keruspe overlay)\n");
 	printf("retry: ask if you want to retry when upgrade fails\n");
@@ -32,6 +34,7 @@ void
 get_options(options * opts, int argc, char ** argv)
 {
 	opts->sync = false;
+        opts->metadata = false;
 	opts->wait = false;
 	opts->retry = false;
 	opts->ask = NULL;
@@ -44,6 +47,8 @@ get_options(options * opts, int argc, char ** argv)
 		{
 			if (strcmp(argv[i], "--sync") == 0)
 				opts->sync = true;
+			else if (strcmp(argv[i], "--metadata") == 0)
+				opts->metadata = true;
 			else if (strcmp(argv[i], "--wait") == 0)
 				opts->wait = true;
 			else if (strcmp(argv[i], "--ask") == 0)
@@ -60,6 +65,9 @@ get_options(options * opts, int argc, char ** argv)
 			{
 			case 's':
 				opts->sync = true;
+				break;
+			case 'm':
+				opts->metadata = true;
 				break;
 			case 'w':
 				opts->wait = true;
@@ -82,6 +90,12 @@ void
 cave_sync()
 {
 	exec_bg_and_wait("/usr/bin/cave", "cave", "sync", NULL);
+}
+
+void
+cave_generate_metadata()
+{
+	exec_bg_and_wait("/usr/bin/cave", "cave", "generate-metadata", NULL);
 }
 
 bool
@@ -124,7 +138,11 @@ main(int argc, char ** argv)
 	options opts;
 	bool purge = true;
 	get_options(&opts, argc, argv);
-	if (opts.sync) cave_sync();
+	if (opts.sync)
+        {
+                cave_sync();
+                if (opts.metadata) cave_generate_metadata();
+        }
 	bool success = cave_resolve(&opts);
 	if (opts.wait)
 	{
