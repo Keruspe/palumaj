@@ -134,7 +134,7 @@ cave_purge(const char * ask)
 static void
 cave_fix_linkage(const char * ask)
 {
-    exec_bg_and_wait("/usr/bin/cave", "cave", "fix-linkage", "-x", "--", "-Ca", ask, NULL);
+    exec_bg_and_wait("/usr/bin/cave", "cave", "fix-linkage", "-x", "--", "-Ca", "-d", "*/*", ask, NULL);
 }
 
 int
